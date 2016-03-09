@@ -30,7 +30,7 @@
 # define FALSE	(0)
 #endif
 
-#define SPACER		"   "
+#define SPACER		"  "
 #define FLAG_ARRAY	0x01
 #define FLAG_PRETTY	0x02
 #define FLAG_NOBOOL	0x04
