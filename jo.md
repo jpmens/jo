@@ -203,6 +203,24 @@ during object assignment:
     $ jo files:=child.json
     {"files":["AUTHORS","COPYING","ChangeLog" ....
 
+Create empty objects or arrays, intentionally or potentially:
+
+    $ jo </dev/null
+    {}
+
+    $ jo -a </dev/null
+    []
+
+    $ EMPTY_ARRAY=()
+    $ jo -a "${EMPTY_ARRAY[@]}" </dev/null
+    []
+    
+    $ MY_ARRAY=(a=1 b=2)
+    $ jo -a "${MY_ARRAY[@]}" </dev/null
+    ["a=1","b=2"]
+    $ jo "${MY_ARRAY[@]}" </dev/null
+    {"a":1,"b":2}
+
 OPTIONS
 =======
 
