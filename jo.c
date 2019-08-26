@@ -277,6 +277,9 @@ JsonNode *vnode(char *str, int flags)
 			free(encoded);
 		} else if (jsonmode) {
 			j = json_decode(content);
+			if (j == NULL) {
+				errx(1, "Cannot decode JSON in file %s", filename);
+			}
 		} else {
 			char *bp = content + strlen(content) - 1;
 
