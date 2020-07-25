@@ -340,18 +340,20 @@ JsonNode *boolnode(char *str)
 
 int usage(char *prog)
 {
-	fprintf(stderr, "Usage: %s [-a] [-B] [-d keydelim] [-p] [-e] [-v] [-V] [--] [-s|-n|-b] [word...]\n", prog);
+	fprintf(stderr, "Usage: %s [-a] [-B] [-d keydelim] [-p] [-e] [-n] [-v] [-V] [--] [-s|-n|-b] [word...]\n", prog);
 	fprintf(stderr, "\tword is key=value or key@value\n");
 	fprintf(stderr, "\t-a creates an array of words\n");
 	fprintf(stderr, "\t-B disable boolean true/false/null detection\n");
 	fprintf(stderr, "\t-d key will be object path separated by keydelim\n");
 	fprintf(stderr, "\t-p pretty-prints JSON on output\n");
-	fprintf(stderr, "\t-e if stdin is empty do not wait for input quit\n");
+	fprintf(stderr, "\t-e quit if stdin is empty, do not wait for input\n");
+	fprintf(stderr, "\t-n skip null-valued keys\n");
+	fprintf(stderr, "\t-v show version\n");
+	fprintf(stderr, "\t-V show version in JSON\n");
+	fprintf(stderr, "    The following flags only apply after '--':\n");
 	fprintf(stderr, "\t-s coerce type guessing to string\n");
 	fprintf(stderr, "\t-b coerce type guessing to bool\n");
 	fprintf(stderr, "\t-n coerce type guessing to number\n");
-	fprintf(stderr, "\t-v show version\n");
-	fprintf(stderr, "\t-V show version in JSON\n");
 
 	return (-1);
 }
