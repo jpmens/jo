@@ -221,7 +221,7 @@ it starts with `:` the contents are interpreted as JSON:
     $ jo filename=AUTHORS content=%AUTHORS
     {"filename":"AUTHORS","content":"SmFuLVBpZXQgTWVucyA8anBtZW5zQGdtYWlsLmNvbT4K"}
 
-    $ jo nested=:nested.json
+    $ jo nested:=nested.json
     {"nested":{"field1":123,"field2":"abc"}}
 
 These characters can be escaped to avoid interpretation:
