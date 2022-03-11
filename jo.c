@@ -282,7 +282,7 @@ JsonNode *vnode(char *str, int flags)
 			} else if (jsonmode) {
 				j = json_decode(content);
 				if (j == NULL) {
-					errx(1, "Oops! Cannot decode JSON in file %s", filename);
+					errx(1, "Cannot decode JSON in file %s", filename);
 				}
 			}
 	
