@@ -444,8 +444,10 @@ int member_to_object(JsonNode *object, int flags, char key_delim, char *kv)
 			errx(1, "Error reading file %s", filename);
 		}
 
-		JsonNode *o = (flags & FLAG_SKIPNULLS) ? NULL : json_mknull();
-		if (len > 0) {
+		JsonNode *o = NULL;
+                if (len == 0) {
+			o = (flags & FLAG_SKIPNULLS) ? NULL : json_mknull();
+		} else {
                 	o = json_decode(content);
 			if (o == NULL) {
 				errx(1, "Cannot decode JSON in file %s", filename);
