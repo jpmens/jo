@@ -267,8 +267,10 @@ JsonNode *vnode(char *str, int flags)
 			if ((content = slurp_file(filename, &len, false)) == NULL) {
 				errx(1, "Error reading file %s", filename);
 			}
-	
-			if (binmode) {
+
+			if (len == 0) {
+				j =  (flags & FLAG_SKIPNULLS) ? NULL : json_mknull();
+			} else if (binmode) {
 				char *encoded;
 	
 				if ((encoded = base64_encode(content, len)) == NULL) {
@@ -280,12 +282,12 @@ JsonNode *vnode(char *str, int flags)
 			} else if (jsonmode) {
 				j = json_decode(content);
 				if (j == NULL) {
-					errx(1, "Cannot decode JSON in file %s", filename);
+					errx(1, "Oops! Cannot decode JSON in file %s", filename);
 				}
 			}
 	
 			// If it got this far without valid JSON, just consider it a string
-			if (j == NULL) {
+			if (j == NULL && len > 0) {
 				char *bp = content + strlen(content) - 1;
 	
 				if (*bp == '\n') *bp-- = 0;
@@ -442,12 +444,14 @@ int member_to_object(JsonNode *object, int flags, char key_delim, char *kv)
 			errx(1, "Error reading file %s", filename);
 		}
 
-		JsonNode *o = json_decode(content);
+		JsonNode *o = (flags & FLAG_SKIPNULLS) ? NULL : json_mknull();
+		if (len > 0) {
+                	o = json_decode(content);
+			if (o == NULL) {
+				errx(1, "Cannot decode JSON in file %s", filename);
+                        }
+                }
 		free(content);
-
-		if (o == NULL) {
-			errx(1, "Cannot decode JSON in file %s", filename);
-		}
 
 		*r = 0;		/* Chop at ":=" */
 		if (!resolve_nested(flags, &kv, key_delim, o, &object))
@@ -747,9 +751,15 @@ int main(int argc, char **argv)
 		exit(2);
 	}
 
-	p = ttyout ? locale_from_utf8(js_string, -1) : js_string;
-	printf("%s\n", p);
-	if (ttyout) locale_free(p);
+	if ((flags & FLAG_SKIPNULLS) && strcmp(js_string, "[]") == 0) {
+		/* ignore empty array and print nothing */
+	} else {
+		p = ttyout ? locale_from_utf8(js_string, -1) : js_string;
+		printf("%s\n", p);
+		if (ttyout)
+			locale_free(p);
+	}
+
 	free(js_string);
 	json_delete(json);
 	json_delete(pile);
