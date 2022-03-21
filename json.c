@@ -355,11 +355,11 @@ static void to_surrogate_pair(js_uchar_t unicode, uint16_t *uc, uint16_t *lc)
 #define is_space(c) ((c) == '\t' || (c) == '\n' || (c) == '\r' || (c) == ' ')
 #define is_digit(c) ((c) >= '0' && (c) <= '9')
 
-static bool parse_value     (const char **sp, JsonNode        **out);
+static bool parse_value     (const char **sp, JsonNode        **out, bool skip_nulls);
 static bool parse_string    (const char **sp, char            **out);
 static bool parse_number    (const char **sp, double           *out);
-static bool parse_array     (const char **sp, JsonNode        **out);
-static bool parse_object    (const char **sp, JsonNode        **out);
+static bool parse_array     (const char **sp, JsonNode        **out, bool skip_nulls);
+static bool parse_object    (const char **sp, JsonNode        **out, bool skip_nulls);
 static bool parse_hex16     (const char **sp, uint16_t         *out);
 
 static bool expect_literal  (const char **sp, const char *str);
@@ -388,22 +388,22 @@ static void (*append_member_node_fn)(JsonNode *parent, JsonNode *child) = append
 static bool tag_is_valid(unsigned int tag);
 static bool number_is_valid(const char *num);
 
-JsonNode *json_decode(const char *json)
+bool json_decode(const char *json, JsonNode **out, bool skip_nulls)
 {
 	const char *s = json;
-	JsonNode *ret;
 	
 	skip_space(&s);
-	if (!parse_value(&s, &ret))
-		return NULL;
+	if (!parse_value(&s, out, skip_nulls))
+		return false;
 	
 	skip_space(&s);
 	if (*s != 0) {
-		json_delete(ret);
-		return NULL;
+                if (out)
+                        json_delete(*out);
+		return false;
 	}
 	
-	return ret;
+	return true;
 }
 
 char *json_encode(const JsonNode *node)
@@ -465,7 +465,7 @@ bool json_validate(const char *json)
 	const char *s = json;
 	
 	skip_space(&s);
-	if (!parse_value(&s, NULL))
+	if (!parse_value(&s, NULL, false))
 		return false;
 	
 	skip_space(&s);
@@ -717,7 +717,7 @@ void json_remove_from_parent(JsonNode *node)
 	}
 }
 
-static bool parse_value(const char **sp, JsonNode **out)
+static bool parse_value(const char **sp, JsonNode **out, bool skip_nulls)
 {
 	const char *s = *sp;
 	
@@ -725,7 +725,7 @@ static bool parse_value(const char **sp, JsonNode **out)
 		case 'n':
 			if (expect_literal(&s, "null")) {
 				if (out)
-					*out = json_mknull();
+					*out = skip_nulls? NULL: json_mknull();
 				*sp = s;
 				return true;
 			}
@@ -761,14 +761,14 @@ static bool parse_value(const char **sp, JsonNode **out)
 		}
 		
 		case '[':
-			if (parse_array(&s, out)) {
+			if (parse_array(&s, out, skip_nulls)) {
 				*sp = s;
 				return true;
 			}
 			return false;
 		
 		case '{':
-			if (parse_object(&s, out)) {
+			if (parse_object(&s, out, skip_nulls)) {
 				*sp = s;
 				return true;
 			}
@@ -787,7 +787,7 @@ static bool parse_value(const char **sp, JsonNode **out)
 	}
 }
 
-static bool parse_array(const char **sp, JsonNode **out)
+static bool parse_array(const char **sp, JsonNode **out, bool skip_nulls)
 {
 	const char *s = *sp;
 	JsonNode *ret = out ? json_mkarray() : NULL;
@@ -803,7 +803,7 @@ static bool parse_array(const char **sp, JsonNode **out)
 	}
 	
 	for (;;) {
-		if (!parse_value(&s, out ? &element : NULL))
+		if (!parse_value(&s, out ? &element : NULL, skip_nulls))
 			goto failure;
 		skip_space(&s);
 		
@@ -822,8 +822,14 @@ static bool parse_array(const char **sp, JsonNode **out)
 	
 success:
 	*sp = s;
-	if (out)
+
+	if (out) {
+                if (skip_nulls && ret->children.tail == NULL) {
+                        json_delete(ret);
+                        ret = NULL;
+                }
 		*out = ret;
+        }
 	return true;
 
 failure:
@@ -831,7 +837,7 @@ failure:
 	return false;
 }
 
-static bool parse_object(const char **sp, JsonNode **out)
+static bool parse_object(const char **sp, JsonNode **out, bool skip_nulls)
 {
 	const char *s = *sp;
 	JsonNode *ret = out ? json_mkobject() : NULL;
@@ -856,7 +862,7 @@ static bool parse_object(const char **sp, JsonNode **out)
 			goto failure_free_key;
 		skip_space(&s);
 		
-		if (!parse_value(&s, out ? &value : NULL))
+		if (!parse_value(&s, out ? &value : NULL, skip_nulls))
 			goto failure_free_key;
 		skip_space(&s);
 		
@@ -875,8 +881,13 @@ static bool parse_object(const char **sp, JsonNode **out)
 	
 success:
 	*sp = s;
-	if (out)
+	if (out) {
+                if (skip_nulls && ret->children.tail == NULL) {
+                        json_delete(ret);
+                        ret = NULL;
+                }
 		*out = ret;
+        }
 	return true;
 
 failure_free_key:

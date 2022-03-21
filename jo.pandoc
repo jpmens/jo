@@ -20,8 +20,13 @@ Without option `-a` it generates an object whereby each _word_ is a `key=value` 
 pair with _key_ being the JSON object element and _value_ its value. *jo* attempts to
 guess the type of _value_ in order to create number (using _strtod(3)_), string, or null values in JSON.
 
-A missing or empty _value_ normally results in an element whose value is `null`. If `-n` is specified, this
-element is not created.
+A missing or empty _value_ normally results in an element whose value is `null`.
+For example, `jo key= ` is equivalent to `jo key=null`.
+
+If `-n` is specified, elements with empty, `null`, `[]` or `{}` values will be ignored, thus not created.
+For example, `jo -n key= `, `jo -n key=null`, `jo -n key=[]` and `jo -n key={}` all result in an empty object `{}`.
+Note that the `-n` effect is recursive.
+That is, `jo -n key='{"foo":null}'` also results in an empty object `{}`, instead of `{"key":{}}`.
 
 *jo* normally treats _key_ as a literal string value. If the `-d` option is specified, _key_ will be
 interpreted as an _object path_, whose individual components are separated by the first character of _keydelim_.

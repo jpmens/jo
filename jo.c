@@ -219,10 +219,20 @@ JsonNode *jo_mknumber(char *str, JsonTag type) {
 JsonNode *vnode(char *str, int flags)
 {
 	JsonTag type = flags_to_tag(flags);
+	bool skip_nulls = (flags & FLAG_SKIPNULLS);
 
-	if (strlen(str) == 0) {
-		return (flags & FLAG_SKIPNULLS) ? (JsonNode *)NULL : jo_mknull(type);
-	}
+	if (flags & FLAG_SKIPNULLS) {
+		if (strlen(str) == 0 ||
+		    strcmp(str, "null") == 0 ||
+		    strcmp(str, "[]") == 0 ||
+		    strcmp(str, "{}") == 0) {
+			return NULL;
+		}
+        } else {
+		if (strlen(str) == 0) {
+			return jo_mknull(type);
+		}
+        }
 
 	/* If str begins with a double quote, keep it a string */
 
@@ -263,6 +273,7 @@ JsonNode *vnode(char *str, int flags)
 			bool jsonmode = (*str == ':');
 			size_t len = 0;
 			JsonNode *j = NULL;
+			bool ok = false;
 	
 			if ((content = slurp_file(filename, &len, false)) == NULL) {
 				errx(1, "Error reading file %s", filename);
@@ -274,22 +285,24 @@ JsonNode *vnode(char *str, int flags)
 				if ((encoded = base64_encode(content, len)) == NULL) {
 					errx(1, "Cannot base64-encode file %s", filename);
 				}
-	
+
+				ok = true;
 				j = json_mkstring(encoded);
 				free(encoded);
 			} else if (jsonmode) {
-				j = json_decode(content);
-				if (j == NULL) {
+				ok = json_decode(content, &j, skip_nulls);
+				if (!ok) {
 					errx(1, "Cannot decode JSON in file %s", filename);
 				}
 			}
 	
 			// If it got this far without valid JSON, just consider it a string
-			if (j == NULL) {
+			if (!ok && j == NULL) {
 				char *bp = content + strlen(content) - 1;
 	
 				if (*bp == '\n') *bp-- = 0;
 				if (*bp == '\r') *bp = 0;
+				ok = true;
 				j = json_mkstring(content);
 			}
 			free(content);
@@ -301,9 +314,9 @@ JsonNode *vnode(char *str, int flags)
 		if (type == JSON_STRING) {
 			return json_mkstring(str);
 		}
-		JsonNode *obj = json_decode(str);
 
-		if (obj == NULL) {
+		JsonNode *obj = NULL;
+		if (!json_decode(str, &obj, skip_nulls)) {
 			/* JSON cannot be decoded; return the string */
 			// fprintf(stderr, "Cannot decode JSON from %s\n", str);
 
@@ -428,6 +441,7 @@ bool resolve_nested(int flags, char **keyp, char key_delim, JsonNode *value, Jso
 
 int member_to_object(JsonNode *object, int flags, char key_delim, char *kv)
 {
+	bool skip_nulls = (flags & FLAG_SKIPNULLS);
 	/* we expect key=value or key:value (boolean on last) */
 	char *p = strchr(kv, '=');
 	char *q = strchr(kv, '@');
@@ -442,10 +456,11 @@ int member_to_object(JsonNode *object, int flags, char key_delim, char *kv)
 			errx(1, "Error reading file %s", filename);
 		}
 
-		JsonNode *o = json_decode(content);
+		JsonNode *o = NULL;
+		bool ok = json_decode(content, &o, skip_nulls);
 		free(content);
 
-		if (o == NULL) {
+		if (!ok) {
 			errx(1, "Cannot decode JSON in file %s", filename);
 		}
 
@@ -657,13 +672,13 @@ int main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
+	bool skip_nulls = (flags & FLAG_SKIPNULLS);
 	pile = json_mkobject();
 	if (in_file != NULL) {
 		if ((in_str = slurp_file(in_file, &in_len, false)) == NULL) {
 			errx(1, "Error reading file %s", in_file);
 		}
-		json = json_decode(in_str);
-		if (json) {
+		if (json_decode(in_str, &json, skip_nulls) && json) {
 			switch (json->tag) {
 				case JSON_ARRAY:
 					flags |= FLAG_ARRAY;
@@ -673,8 +688,9 @@ int main(int argc, char **argv)
 				default:
 					errx(1, "Input JSON not an array or object: %s", stringify(json, flags));
 			}
-		} else
+		} else {
 			json = (flags & FLAG_ARRAY) ? json_mkarray() : json_mkobject();
+		}
 	} else {
 		json = (flags & FLAG_ARRAY) ? json_mkarray() : json_mkobject();
 	}
