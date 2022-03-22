@@ -398,8 +398,10 @@ bool json_decode(const char *json, JsonNode **out, bool skip_nulls)
 	
 	skip_space(&s);
 	if (*s != 0) {
-                if (out)
+                if (out) {
                         json_delete(*out);
+                        *out = NULL;
+                }
 		return false;
 	}
 	
