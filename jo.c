@@ -221,18 +221,9 @@ JsonNode *vnode(char *str, int flags)
 	JsonTag type = flags_to_tag(flags);
 	bool skip_nulls = (flags & FLAG_SKIPNULLS);
 
-	if (flags & FLAG_SKIPNULLS) {
-		if (strlen(str) == 0 ||
-		    strcmp(str, "null") == 0 ||
-		    strcmp(str, "[]") == 0 ||
-		    strcmp(str, "{}") == 0) {
-			return NULL;
-		}
-        } else {
-		if (strlen(str) == 0) {
-			return jo_mknull(type);
-		}
-        }
+	if (strlen(str) == 0) {
+		return skip_nulls? NULL: jo_mknull(type);
+	}
 
 	/* If str begins with a double quote, keep it a string */
 
@@ -260,7 +251,7 @@ JsonNode *vnode(char *str, int flags)
 		} else if (strcmp(str, "false") == 0) {
 			return jo_mkbool(false, type);
 		} else if (strcmp(str, "null") == 0) {
-			return jo_mknull(type);
+			return skip_nulls? NULL: jo_mknull(type);
 		}
 	}
 
