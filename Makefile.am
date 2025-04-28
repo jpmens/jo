@@ -3,7 +3,7 @@ AM_CFLAGS	= -Wall -O2
 
 bin_PROGRAMS	= jo
 jo_SOURCES	= jo.c json.c json.h base64.c base64.h
-jo_EXTRA	= jo.pandoc
+jo_EXTRA	= jo.pandoc LICENSE.GPLv2
 dist_man_MANS	= jo.1
 jo_LDADD	= -lm
 
